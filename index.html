@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Vector to Video</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <script type="importmap">
         {
             "imports": {
@@ -13,49 +15,220 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
-        :root { --sidebar-width: 360px; --primary: #007bff; --bg: #111; }
-        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; display: flex; width: 100vw; height: 100vh; }
-        
-        .sidebar { 
-            width: var(--sidebar-width); background: var(--bg); border-right: 1px solid #333; 
-            padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; 
-            gap: 8px; z-index: 10; height: 100vh; overflow-y: auto; flex-shrink: 0; 
-            transition: transform 0.3s ease; 
+        :root {
+            --sidebar-width: 360px;
+            --primary: #007bff;
+            --bg: #111;
         }
-        .sidebar.hidden { transform: translateX(-100%); position: absolute; }
 
-        #canvas-container { 
-            flex-grow: 1; position: relative; height: 100vh; background-color: #080808; 
-            display: flex; align-items: center; justify-content: center; overflow: hidden; 
-            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
+        body {
+            margin: 0;
+            background: #000;
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            display: flex;
+            width: 100vw;
+            height: 100vh;
         }
-        canvas { width: 100% !important; height: 100% !important; object-fit: contain; }
 
-        #renderOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        .loader { border: 4px solid #333; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg);
+            border-right: 1px solid #333;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+            height: 100vh;
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
 
-        .control-group { display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #222; padding-bottom: 12px; margin-bottom: 8px; }
-        label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-        .val-display { color: var(--primary); font-family: monospace; font-size: 11px; }
-        .section-header { font-size: 11px; color: var(--primary); margin-top: 5px; font-weight: 800; letter-spacing: 1px; }
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            position: absolute;
+        }
 
-        input[type=range], select, input[type=color], input[type=text] { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; font-size: 12px; }
-        input[type=range] { padding: 0; height: 4px; margin: 12px 0; accent-color: var(--primary); cursor: pointer; }
-        
-        .row { display: flex; gap: 5px; align-items: center; }
-        button { background: #2a2a2a; border: 1px solid #444; font-weight: bold; cursor: pointer; padding: 12px; color: white; border-radius: 4px; width: 100%; transition: all 0.2s; margin-top:5px; }
-        button:hover { background: #3a3a3a; }
-        button.primary { background: var(--primary); border-color: #0056b3; }
-        
-        #uiToggle { position: absolute; bottom: 20px; left: 20px; z-index: 20; width: 40px; height: 40px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; }
-        
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            height: 100vh;
+            background-color: #080808;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-image: radial-gradient(#222 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+
+        #renderOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 12px;
+            margin-bottom: 8px;
+        }
+
+        label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .val-display {
+            color: var(--primary);
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .section-header {
+            font-size: 11px;
+            color: var(--primary);
+            margin-top: 5px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        input[type=range],
+        select,
+        input[type=color],
+        input[type=text] {
+            width: 100%;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: white;
+            box-sizing: border-box;
+            font-size: 12px;
+        }
+
+        input[type=range] {
+            padding: 0;
+            height: 4px;
+            margin: 12px 0;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .row {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        button {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 12px;
+            color: white;
+            border-radius: 4px;
+            width: 100%;
+            transition: all 0.2s;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background: #3a3a3a;
+        }
+
+        button.primary {
+            background: var(--primary);
+            border-color: #0056b3;
+        }
+
+        #uiToggle {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 20;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* --- NEW LOGO STYLES --- */
-        .logo-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #222; }
-        .logo-icon { width: 28px; height: 28px; color: var(--primary); }
-        .logo-text { font-weight: 800; font-size: 16px; letter-spacing: 1px; color: white; text-transform: uppercase; }
+        .logo-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #222;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            color: var(--primary);
+        }
+
+        .logo-text {
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: 1px;
+            color: white;
+            text-transform: uppercase;
+        }
     </style>
 </head>
+
 <body>
 
     <button id="uiToggle">👁</button>
@@ -68,13 +241,14 @@
     </div>
 
     <div class="sidebar" id="sidebar">
-        
+
         <div class="logo-header">
             <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                <polygon points="10 10 15 12 10 14 10 10" fill="currentColor" stroke="none"></polygon>
+
+                <polygon points="7 6 19 12 7 18" fill="#ff0000" stroke="none"></polygon>
             </svg>
             <div class="logo-text">Vector to Video</div>
         </div>
@@ -162,7 +336,7 @@
             <input type="range" id="zoom" min="0.1" max="5" step="0.1" value="1.5" class="sync-val">
             <button id="fitBtn" style="margin-top:5px; background:#444;">Auto-Fit Object</button>
         </div>
-        
+
         <button id="loopBtn" class="primary">Start Render</button>
     </div>
 
@@ -192,9 +366,9 @@
                     const { createFFmpeg } = FFmpeg;
                     ffmpeg = createFFmpeg({ log: false });
                     await ffmpeg.load();
-                } catch(e) { console.warn("FFmpeg failed load", e); canUseMP4 = false; }
+                } catch (e) { console.warn("FFmpeg failed load", e); canUseMP4 = false; }
             }
-            
+
             // Dynamic Button Label
             document.getElementById('loopBtn').innerText = canUseMP4 ? "Render Seamless MP4" : "Render Seamless WebM";
 
@@ -217,14 +391,14 @@
             keyLight = new THREE.PointLight(0xffaa00, 5, 0, 1);
             keyLight.position.set(400, 200, 600);
             scene.add(keyLight);
-            
+
             pivot = new THREE.Group();
             scene.add(pivot);
 
             loadSession().then(() => { updateEngine('res'); });
             window.addEventListener('resize', () => updateEngine('res'));
             document.getElementById('uiToggle').onclick = () => document.getElementById('sidebar').classList.toggle('hidden');
-            
+
             requestAnimationFrame(previewLoop);
         }
 
@@ -235,7 +409,7 @@
             });
 
             if (type === 'geo') buildObject();
-            
+
             keyLight.color.set(document.getElementById('lightColor').value);
             keyLight.intensity = parseFloat(document.getElementById('lightIntensity').value);
             keyLight.position.z = parseFloat(document.getElementById('lightZ').value);
@@ -247,17 +421,17 @@
             scene.background = isTrans ? null : new THREE.Color(document.getElementById('bgColor').value);
 
             camera.position.z = parseFloat(document.getElementById('zoom').value) * 500;
-            
+
             if (type === 'res') {
                 const res = document.getElementById('resolution').value;
                 const cont = document.getElementById('canvas-container');
                 let w = cont.clientWidth, h = cont.clientHeight;
-                
-                if (res === 'yt_hd') { h = w * (9/16); }
-                else if (res === 'tiktok') { w = h * (9/16); }
+
+                if (res === 'yt_hd') { h = w * (9 / 16); }
+                else if (res === 'tiktok') { w = h * (9 / 16); }
                 else if (res === 'insta') { w = Math.min(w, h); h = w; }
-                
-                w = Math.floor(w / 2) * 2; 
+
+                w = Math.floor(w / 2) * 2;
                 h = Math.floor(h / 2) * 2;
 
                 renderer.setSize(w, h, false);
@@ -287,24 +461,24 @@
                 shapes.forEach((shape) => {
                     const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelOffset: isInner ? -bevel : 0, bevelSegments: 3 });
                     let mat;
-                    if(mode === 'crystal') mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 1, transparent: true, opacity: 0.3, roughness: rough, metalness: metal, ior: 1.5, thickness: depth, envMapIntensity: 1.5 });
+                    if (mode === 'crystal') mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 1, transparent: true, opacity: 0.3, roughness: rough, metalness: metal, ior: 1.5, thickness: depth, envMapIntensity: 1.5 });
                     else mat = new THREE.MeshStandardMaterial({ color: (mode === 'chrome') ? 0xffffff : (path.color || 0xffffff), metalness: metal, roughness: rough, envMapIntensity: 1.5 });
                     group.add(new THREE.Mesh(geo, mat));
                 });
             });
             const box = new THREE.Box3().setFromObject(group);
             const center = new THREE.Vector3(); box.getCenter(center);
-            group.position.set(-center.x, -center.y, -depth/2);
-            const wrapper = new THREE.Group(); wrapper.scale.set(1,-1,1); wrapper.add(group);
+            group.position.set(-center.x, -center.y, -depth / 2);
+            const wrapper = new THREE.Group(); wrapper.scale.set(1, -1, 1); wrapper.add(group);
             pivot.add(wrapper);
         }
 
         function updateAnimationState(phase) {
             const style = document.getElementById('animStyle').value;
-            if (style === 'spin') { pivot.rotation.set(0, phase, 0); pivot.position.set(0,0,0); } 
-            else if (style === 'seesaw') { pivot.rotation.set(0, 0, Math.sin(phase) * 0.4); pivot.position.set(0,0,0); }
+            if (style === 'spin') { pivot.rotation.set(0, phase, 0); pivot.position.set(0, 0, 0); }
+            else if (style === 'seesaw') { pivot.rotation.set(0, 0, Math.sin(phase) * 0.4); pivot.position.set(0, 0, 0); }
             else if (style === 'bounce') { pivot.position.y = Math.sin(phase) * 40; pivot.rotation.set(0, Math.sin(phase) * 0.2, 0); }
-            else if (style === 'tumble') { pivot.rotation.set(Math.sin(phase), phase, Math.sin(phase * 2) * 0.5); pivot.position.set(0,0,0); }
+            else if (style === 'tumble') { pivot.rotation.set(Math.sin(phase), phase, Math.sin(phase * 2) * 0.5); pivot.position.set(0, 0, 0); }
             else if (style === 'float') { pivot.position.y = Math.sin(phase * 2) * 15; pivot.rotation.set(Math.sin(phase) * 0.1, Math.sin(phase) * 0.1, 0); }
         }
 
@@ -321,11 +495,11 @@
         document.getElementById('loopBtn').onclick = async () => {
             isRendering = true;
             document.getElementById('renderOverlay').style.display = 'flex';
-            
+
             const duration = parseFloat(document.getElementById('duration').value);
             const totalFrames = Math.floor(duration * 60);
-            
-            pivot.rotation.set(0,0,0); pivot.position.set(0,0,0);
+
+            pivot.rotation.set(0, 0, 0); pivot.position.set(0, 0, 0);
             composer.render();
 
             if (canUseMP4 && ffmpeg) {
@@ -336,19 +510,19 @@
                     composer.render();
                     const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/jpeg', 0.95));
                     await ffmpeg.FS('writeFile', `f${i}.jpg`, await fetchFile(blob));
-                    document.getElementById('renderProgress').innerText = Math.round((i/totalFrames)*100)+"%";
+                    document.getElementById('renderProgress').innerText = Math.round((i / totalFrames) * 100) + "%";
                 }
                 document.getElementById('renderText').innerText = "Encoding MP4...";
                 await ffmpeg.run('-framerate', '60', '-i', 'f%d.jpg', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4');
                 const data = ffmpeg.FS('readFile', 'output.mp4');
-                download(new Blob([data.buffer], {type:'video/mp4'}), '3d_loop.mp4');
+                download(new Blob([data.buffer], { type: 'video/mp4' }), '3d_loop.mp4');
             } else {
                 const stream = renderer.domElement.captureStream(0);
                 const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 100000000 });
                 const chunks = [];
                 recorder.ondataavailable = e => chunks.push(e.data);
-                recorder.onstop = () => download(new Blob(chunks, {type:'video/webm'}), '3d_loop.webm');
-                
+                recorder.onstop = () => download(new Blob(chunks, { type: 'video/webm' }), '3d_loop.webm');
+
                 recorder.start();
                 let frame = 0;
                 const track = stream.getVideoTracks()[0];
@@ -359,7 +533,7 @@
                     composer.render();
                     track.requestFrame();
                     frame++;
-                    document.getElementById('renderProgress').innerText = Math.round((frame/totalFrames)*100)+"%";
+                    document.getElementById('renderProgress').innerText = Math.round((frame / totalFrames) * 100) + "%";
                     setTimeout(nextFrame, 16);
                 }
                 nextFrame();
@@ -376,7 +550,7 @@
         const openDB = () => new Promise(res => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME); req.onsuccess = () => res(req.result); });
         async function saveFile(text) { const db = await openDB(); db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(text, "lastSVG"); }
         async function getFile() { const db = await openDB(); return new Promise(res => { const req = db.transaction(STORE_NAME).objectStore(STORE_NAME).get("lastSVG"); req.onsuccess = () => res(req.result); }); }
-        
+
         async function loadSession() {
             const saved = localStorage.getItem('studioSettings');
             if (saved) {
@@ -388,9 +562,9 @@
         }
 
         document.getElementById('upload').onchange = async (e) => {
-            const f = e.target.files[0]; if(f) { currentSVGText = await f.text(); await saveFile(currentSVGText); await buildObject(); updateEngine(); }
+            const f = e.target.files[0]; if (f) { currentSVGText = await f.text(); await saveFile(currentSVGText); await buildObject(); updateEngine(); }
         };
-        document.querySelectorAll('.sync-val').forEach(el => el.oninput = () => updateEngine(['depth','bevel','innerBevel','matMode'].includes(el.id) ? 'geo' : null));
+        document.querySelectorAll('.sync-val').forEach(el => el.oninput = () => updateEngine(['depth', 'bevel', 'innerBevel', 'matMode'].includes(el.id) ? 'geo' : null));
         document.getElementById('fitBtn').onclick = () => {
             const box = new THREE.Box3().setFromObject(pivot);
             const size = box.getSize(new THREE.Vector3());
@@ -402,4 +576,5 @@
         init();
     </script>
 </body>
+
 </html>
