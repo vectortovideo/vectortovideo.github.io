@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>3D Studio - Master Edition</title>
+    <title>Vector to Video</title>
     <script type="importmap">
         {
             "imports": {
@@ -49,6 +49,11 @@
         button.primary { background: var(--primary); border-color: #0056b3; }
         
         #uiToggle { position: absolute; bottom: 20px; left: 20px; z-index: 20; width: 40px; height: 40px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; }
+        
+        /* --- NEW LOGO STYLES --- */
+        .logo-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #222; }
+        .logo-icon { width: 28px; height: 28px; color: var(--primary); }
+        .logo-text { font-weight: 800; font-size: 16px; letter-spacing: 1px; color: white; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -63,8 +68,17 @@
     </div>
 
     <div class="sidebar" id="sidebar">
-        <h3>3D STUDIO PRO</h3>
         
+        <div class="logo-header">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                <polygon points="10 10 15 12 10 14 10 10" fill="currentColor" stroke="none"></polygon>
+            </svg>
+            <div class="logo-text">Vector to Video</div>
+        </div>
+
         <div class="control-group">
             <label>1. SVG File</label>
             <input type="file" id="upload" accept=".svg">
@@ -338,7 +352,6 @@
                 recorder.start();
                 let frame = 0;
                 const track = stream.getVideoTracks()[0];
-                
                 function nextFrame() {
                     if (frame >= totalFrames) { recorder.stop(); return; }
                     const phase = (Math.PI * 2) * (frame / totalFrames);
