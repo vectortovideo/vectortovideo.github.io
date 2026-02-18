@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Studio - Master Edition</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <style>
+        :root { --sidebar-width: 360px; --primary: #007bff; --bg: #111; }
+        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; display: flex; width: 100vw; height: 100vh; }
+        
+        .sidebar { 
+            width: var(--sidebar-width); background: var(--bg); border-right: 1px solid #333; 
+            padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; 
+            gap: 8px; z-index: 10; height: 100vh; overflow-y: auto; flex-shrink: 0; 
+            transition: transform 0.3s ease; 
+        }
+        .sidebar.hidden { transform: translateX(-100%); position: absolute; }
+
+        #canvas-container { 
+            flex-grow: 1; position: relative; height: 100vh; background-color: #080808; 
+            display: flex; align-items: center; justify-content: center; overflow: hidden; 
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
+        }
+        canvas { width: 100% !important; height: 100% !important; object-fit: contain; }
+
+        #renderOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        .loader { border: 4px solid #333; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .control-group { display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #222; padding-bottom: 12px; margin-bottom: 8px; }
+        label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .val-display { color: var(--primary); font-family: monospace; font-size: 11px; }
+        .section-header { font-size: 11px; color: var(--primary); margin-top: 5px; font-weight: 800; letter-spacing: 1px; }
+
+        input[type=range], select, input[type=color], input[type=text] { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; font-size: 12px; }
+        input[type=range] { padding: 0; height: 4px; margin: 12px 0; accent-color: var(--primary); cursor: pointer; }
+        
+        .row { display: flex; gap: 5px; align-items: center; }
+        button { background: #2a2a2a; border: 1px solid #444; font-weight: bold; cursor: pointer; padding: 12px; color: white; border-radius: 4px; width: 100%; transition: all 0.2s; margin-top:5px; }
+        button:hover { background: #3a3a3a; }
+        button.primary { background: var(--primary); border-color: #0056b3; }
+        
+        #uiToggle { position: absolute; bottom: 20px; left: 20px; z-index: 20; width: 40px; height: 40px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <button id="uiToggle">👁</button>
+
+    <div id="renderOverlay">
+        <div class="loader"></div>
+        <div id="renderText" style="font-size: 16px; font-weight: bold;">Rendering...</div>
+        <div id="renderProgress" style="color: #00ff88; margin-top: 5px; font-family: monospace;">0%</div>
+        <div style="font-size: 11px; color: #666; margin-top: 15px;">Please wait. Do not switch tabs.</div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <h3>3D STUDIO PRO</h3>
+        
+        <div class="control-group">
+            <label>1. SVG File</label>
+            <input type="file" id="upload" accept=".svg">
+        </div>
+
+        <div class="section-header">MOTION</div>
+        <div class="control-group">
+            <label>Animation Style</label>
+            <select id="animStyle" class="sync-val">
+                <option value="spin">Continuous Spin</option>
+                <option value="seesaw">See-Saw (Rocking)</option>
+                <option value="bounce">Bounce (Up/Down)</option>
+                <option value="tumble">3-Axis Tumble</option>
+                <option value="float" selected>Double-Bounce Float</option>
+            </select>
+            <label>Loop Duration <span id="v_duration" class="val-display">4.0s</span></label>
+            <input type="range" id="duration" min="1" max="12" step="0.5" value="4.0" class="sync-val">
+        </div>
+
+        <div class="section-header">LOOK & FEEL</div>
+        <div class="control-group">
+            <label>Material</label>
+            <select id="matMode" class="sync-val">
+                <option value="chrome" selected>Chrome</option>
+                <option value="matte">Matte</option>
+                <option value="crystal">Crystal</option>
+            </select>
+            <label>Roughness <span id="v_roughness" class="val-display">0.15</span></label>
+            <input type="range" id="roughness" min="0" max="1" step="0.01" value="0.15" class="sync-val">
+            <label>Metalness <span id="v_metalness" class="val-display">1.00</span></label>
+            <input type="range" id="metalness" min="0" max="1" step="0.01" value="1.0" class="sync-val">
+            <label>Depth <span id="v_depth" class="val-display">30</span></label>
+            <input type="range" id="depth" min="1" max="200" value="30" class="sync-val">
+            <label>Bevel <span id="v_bevel" class="val-display">0.5</span></label>
+            <input type="range" id="bevel" min="0" max="5" step="0.1" value="0.5" class="sync-val">
+            <div class="row">
+                <input type="checkbox" id="innerBevel" class="sync-val" style="width:auto;">
+                <span style="font-size:11px;color:#888;">Internal Bevel</span>
+            </div>
+        </div>
+
+        <div class="section-header">BLOOM</div>
+        <div class="control-group">
+            <label>Strength <span id="v_bloomStrength" class="val-display">0.5</span></label>
+            <input type="range" id="bloomStrength" min="0" max="3" step="0.1" value="0.5" class="sync-val">
+            <label>Threshold <span id="v_bloomThreshold" class="val-display">0.85</span></label>
+            <input type="range" id="bloomThreshold" min="0" max="1.1" step="0.01" value="0.85" class="sync-val">
+        </div>
+
+        <div class="section-header">LIGHTING</div>
+        <div class="control-group">
+            <label>Intensity <span id="v_lightIntensity" class="val-display">5.0</span></label>
+            <input type="range" id="lightIntensity" min="0" max="10" step="0.1" value="5.0" class="sync-val">
+            <label>Color</label>
+            <input type="color" id="lightColor" value="#ffaa00" class="sync-val">
+            <label>Z-Pos <span id="v_lightZ" class="val-display">600</span></label>
+            <input type="range" id="lightZ" min="100" max="2000" step="10" value="600" class="sync-val">
+        </div>
+
+        <div class="section-header">OUTPUT</div>
+        <div class="control-group">
+            <label>Format</label>
+            <select id="resolution" class="sync-val">
+                <option value="window">Fit Screen</option>
+                <option value="tiktok">TikTok (9:16)</option>
+                <option value="yt_hd">YouTube HD (16:9)</option>
+                <option value="insta">Square (1:1)</option>
+            </select>
+            <label>Background</label>
+            <div class="row">
+                <input type="color" id="bgColor" value="#050505" class="sync-val">
+                <div class="row" style="flex-grow:1; margin-left:10px;">
+                    <input type="checkbox" id="bgTransparent" class="sync-val" style="width:auto;">
+                    <span style="font-size:11px;">Transparent</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Zoom <span id="v_zoom" class="val-display">1.5</span></label>
+            <input type="range" id="zoom" min="0.1" max="5" step="0.1" value="1.5" class="sync-val">
+            <button id="fitBtn" style="margin-top:5px; background:#444;">Auto-Fit Object</button>
+        </div>
+        
+        <button id="loopBtn" class="primary">Start Render</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        let scene, camera, renderer, composer, bloomPass, pivot, currentSVGText, keyLight;
+        let isRendering = false, clock = new THREE.Clock(), currentLoopProgress = 0;
+        let ffmpeg = null;
+        let canUseMP4 = false;
+
+        async function init() {
+            // SILENT Environment Check
+            if (typeof SharedArrayBuffer === 'undefined') {
+                canUseMP4 = false;
+            } else {
+                canUseMP4 = true;
+                try {
+                    const { createFFmpeg } = FFmpeg;
+                    ffmpeg = createFFmpeg({ log: false });
+                    await ffmpeg.load();
+                } catch(e) { console.warn("FFmpeg failed load", e); canUseMP4 = false; }
+            }
+            
+            // Dynamic Button Label
+            document.getElementById('loopBtn').innerText = canUseMP4 ? "Render Seamless MP4" : "Render Seamless WebM";
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 50000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const pmrem = new THREE.PMREMGenerator(renderer);
+            scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
+
+            const renderScene = new RenderPass(scene, camera);
+            bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.4, 0.85);
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene); composer.addPass(bloomPass); composer.addPass(new OutputPass());
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+            keyLight = new THREE.PointLight(0xffaa00, 5, 0, 1);
+            keyLight.position.set(400, 200, 600);
+            scene.add(keyLight);
+            
+            pivot = new THREE.Group();
+            scene.add(pivot);
+
+            loadSession().then(() => { updateEngine('res'); });
+            window.addEventListener('resize', () => updateEngine('res'));
+            document.getElementById('uiToggle').onclick = () => document.getElementById('sidebar').classList.toggle('hidden');
+            
+            requestAnimationFrame(previewLoop);
+        }
+
+        function updateEngine(type) {
+            document.querySelectorAll('input[type=range]').forEach(input => {
+                const display = document.getElementById('v_' + input.id);
+                if (display) display.innerText = input.id === 'duration' ? input.value + 's' : input.value;
+            });
+
+            if (type === 'geo') buildObject();
+            
+            keyLight.color.set(document.getElementById('lightColor').value);
+            keyLight.intensity = parseFloat(document.getElementById('lightIntensity').value);
+            keyLight.position.z = parseFloat(document.getElementById('lightZ').value);
+
+            bloomPass.strength = parseFloat(document.getElementById('bloomStrength').value);
+            bloomPass.threshold = parseFloat(document.getElementById('bloomThreshold').value);
+
+            const isTrans = document.getElementById('bgTransparent').checked;
+            scene.background = isTrans ? null : new THREE.Color(document.getElementById('bgColor').value);
+
+            camera.position.z = parseFloat(document.getElementById('zoom').value) * 500;
+            
+            if (type === 'res') {
+                const res = document.getElementById('resolution').value;
+                const cont = document.getElementById('canvas-container');
+                let w = cont.clientWidth, h = cont.clientHeight;
+                
+                if (res === 'yt_hd') { h = w * (9/16); }
+                else if (res === 'tiktok') { w = h * (9/16); }
+                else if (res === 'insta') { w = Math.min(w, h); h = w; }
+                
+                w = Math.floor(w / 2) * 2; 
+                h = Math.floor(h / 2) * 2;
+
+                renderer.setSize(w, h, false);
+                composer.setSize(w, h);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+            }
+            const settings = {};
+            document.querySelectorAll('.sync-val').forEach(el => settings[el.id] = (el.type === 'checkbox') ? el.checked : el.value);
+            localStorage.setItem('studioSettings', JSON.stringify(settings));
+        }
+
+        async function buildObject() {
+            if (!currentSVGText) return;
+            const svgData = new SVGLoader().parse(currentSVGText);
+            pivot.clear();
+            const group = new THREE.Group();
+            const depth = parseFloat(document.getElementById('depth').value);
+            const bevel = parseFloat(document.getElementById('bevel').value);
+            const isInner = document.getElementById('innerBevel').checked;
+            const rough = parseFloat(document.getElementById('roughness').value);
+            const metal = parseFloat(document.getElementById('metalness').value);
+            const mode = document.getElementById('matMode').value;
+
+            svgData.paths.forEach((path) => {
+                const shapes = SVGLoader.createShapes(path);
+                shapes.forEach((shape) => {
+                    const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelOffset: isInner ? -bevel : 0, bevelSegments: 3 });
+                    let mat;
+                    if(mode === 'crystal') mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 1, transparent: true, opacity: 0.3, roughness: rough, metalness: metal, ior: 1.5, thickness: depth, envMapIntensity: 1.5 });
+                    else mat = new THREE.MeshStandardMaterial({ color: (mode === 'chrome') ? 0xffffff : (path.color || 0xffffff), metalness: metal, roughness: rough, envMapIntensity: 1.5 });
+                    group.add(new THREE.Mesh(geo, mat));
+                });
+            });
+            const box = new THREE.Box3().setFromObject(group);
+            const center = new THREE.Vector3(); box.getCenter(center);
+            group.position.set(-center.x, -center.y, -depth/2);
+            const wrapper = new THREE.Group(); wrapper.scale.set(1,-1,1); wrapper.add(group);
+            pivot.add(wrapper);
+        }
+
+        function updateAnimationState(phase) {
+            const style = document.getElementById('animStyle').value;
+            if (style === 'spin') { pivot.rotation.set(0, phase, 0); pivot.position.set(0,0,0); } 
+            else if (style === 'seesaw') { pivot.rotation.set(0, 0, Math.sin(phase) * 0.4); pivot.position.set(0,0,0); }
+            else if (style === 'bounce') { pivot.position.y = Math.sin(phase) * 40; pivot.rotation.set(0, Math.sin(phase) * 0.2, 0); }
+            else if (style === 'tumble') { pivot.rotation.set(Math.sin(phase), phase, Math.sin(phase * 2) * 0.5); pivot.position.set(0,0,0); }
+            else if (style === 'float') { pivot.position.y = Math.sin(phase * 2) * 15; pivot.rotation.set(Math.sin(phase) * 0.1, Math.sin(phase) * 0.1, 0); }
+        }
+
+        function previewLoop() {
+            if (isRendering) return;
+            requestAnimationFrame(previewLoop);
+            const duration = parseFloat(document.getElementById('duration').value) || 4.0;
+            currentLoopProgress += clock.getDelta() / duration;
+            if (currentLoopProgress >= 1.0) currentLoopProgress -= 1.0;
+            updateAnimationState(currentLoopProgress * Math.PI * 2);
+            composer.render();
+        }
+
+        document.getElementById('loopBtn').onclick = async () => {
+            isRendering = true;
+            document.getElementById('renderOverlay').style.display = 'flex';
+            
+            const duration = parseFloat(document.getElementById('duration').value);
+            const totalFrames = Math.floor(duration * 60);
+            
+            pivot.rotation.set(0,0,0); pivot.position.set(0,0,0);
+            composer.render();
+
+            if (canUseMP4 && ffmpeg) {
+                const { fetchFile } = FFmpeg;
+                for (let i = 0; i < totalFrames; i++) {
+                    const phase = (Math.PI * 2) * (i / totalFrames);
+                    updateAnimationState(phase);
+                    composer.render();
+                    const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/jpeg', 0.95));
+                    await ffmpeg.FS('writeFile', `f${i}.jpg`, await fetchFile(blob));
+                    document.getElementById('renderProgress').innerText = Math.round((i/totalFrames)*100)+"%";
+                }
+                document.getElementById('renderText').innerText = "Encoding MP4...";
+                await ffmpeg.run('-framerate', '60', '-i', 'f%d.jpg', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4');
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+                download(new Blob([data.buffer], {type:'video/mp4'}), '3d_loop.mp4');
+            } else {
+                const stream = renderer.domElement.captureStream(0);
+                const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 100000000 });
+                const chunks = [];
+                recorder.ondataavailable = e => chunks.push(e.data);
+                recorder.onstop = () => download(new Blob(chunks, {type:'video/webm'}), '3d_loop.webm');
+                
+                recorder.start();
+                let frame = 0;
+                const track = stream.getVideoTracks()[0];
+                
+                function nextFrame() {
+                    if (frame >= totalFrames) { recorder.stop(); return; }
+                    const phase = (Math.PI * 2) * (frame / totalFrames);
+                    updateAnimationState(phase);
+                    composer.render();
+                    track.requestFrame();
+                    frame++;
+                    document.getElementById('renderProgress').innerText = Math.round((frame/totalFrames)*100)+"%";
+                    setTimeout(nextFrame, 16);
+                }
+                nextFrame();
+            }
+        };
+
+        function download(blob, name) {
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+            isRendering = false; document.getElementById('renderOverlay').style.display = 'none';
+            clock.getDelta(); requestAnimationFrame(previewLoop);
+        }
+
+        const DB_NAME = "StudioDB", STORE_NAME = "Files";
+        const openDB = () => new Promise(res => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME); req.onsuccess = () => res(req.result); });
+        async function saveFile(text) { const db = await openDB(); db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(text, "lastSVG"); }
+        async function getFile() { const db = await openDB(); return new Promise(res => { const req = db.transaction(STORE_NAME).objectStore(STORE_NAME).get("lastSVG"); req.onsuccess = () => res(req.result); }); }
+        
+        async function loadSession() {
+            const saved = localStorage.getItem('studioSettings');
+            if (saved) {
+                const s = JSON.parse(saved);
+                Object.keys(s).forEach(id => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; } });
+            }
+            const savedSVG = await getFile();
+            if (savedSVG) { currentSVGText = savedSVG; await buildObject(); }
+        }
+
+        document.getElementById('upload').onchange = async (e) => {
+            const f = e.target.files[0]; if(f) { currentSVGText = await f.text(); await saveFile(currentSVGText); await buildObject(); updateEngine(); }
+        };
+        document.querySelectorAll('.sync-val').forEach(el => el.oninput = () => updateEngine(['depth','bevel','innerBevel','matMode'].includes(el.id) ? 'geo' : null));
+        document.getElementById('fitBtn').onclick = () => {
+            const box = new THREE.Box3().setFromObject(pivot);
+            const size = box.getSize(new THREE.Vector3());
+            const cameraZ = (Math.max(size.x, size.y) / 2) / Math.tan((camera.fov * Math.PI / 180) / 2) * 1.5;
+            document.getElementById('zoom').value = (cameraZ / 500).toFixed(1);
+            updateEngine();
+        };
+
+        init();
+    </script>
+</body>
+</html>
