@@ -26,7 +26,7 @@
         <div class="loader"></div>
         <div id="renderText" style="font-size: 16px; font-weight: bold;">Processing...</div>
         <div id="renderProgress" style="color: #00ff88; margin-top: 5px; font-family: monospace;">0%</div>
-        <div style="font-size: 11px; color: #666; margin-top: 15px;">Capturing frames & Encoding MP4</div>
+        <div style="font-size: 11px; color: #666; margin-top: 15px;">Capturing frames & Encoding WebM</div>
     </div>
 
     <div class="sidebar" id="sidebar">
@@ -41,9 +41,16 @@
             <div class="logo-text">Vector to Video</div>
         </div>
 
+        <div class="section-header">PROJECT</div>
         <div class="control-group">
             <label>1. SVG File</label>
             <input type="file" id="upload" accept=".svg">
+            
+            <label style="margin-top: 15px;">2. Save / Load Session</label>
+            <div class="row" style="gap: 5px;">
+                <button id="exportProjectBtn" class="secondary" style="flex: 1;">Export .studio</button>
+                <button id="importProjectBtn" class="secondary" style="flex: 1;">Import .studio</button>
+            </div>
         </div>
         
         <div class="section-header">PRESETS</div>

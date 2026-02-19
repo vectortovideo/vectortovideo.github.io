@@ -300,4 +300,52 @@ document.getElementById('fitBtn').onclick = () => {
     updateEngine();
 };
 
+// PROJECT EXPORT AND IMPORT
+document.getElementById('exportProjectBtn').onclick = async () => {
+    const currentSVG = await getFile();
+    const settings = localStorage.getItem('studioSettings');
+    const presets = localStorage.getItem('studioCustomPresets');
+    
+    const projectData = {
+        svg: currentSVG || "",
+        settings: settings ? JSON.parse(settings) : {},
+        presets: presets ? JSON.parse(presets) : {}
+    };
+    
+    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); 
+    a.href = URL.createObjectURL(blob); 
+    a.download = 'project.studio'; 
+    a.click();
+};
+
+document.getElementById('importProjectBtn').onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.studio,application/json';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            
+            // Restore data
+            if (data.svg !== undefined) await saveFile(data.svg);
+            if (data.settings) localStorage.setItem('studioSettings', JSON.stringify(data.settings));
+            if (data.presets) localStorage.setItem('studioCustomPresets', JSON.stringify(data.presets));
+            
+            // Refresh UI and Engine
+            initPresets();
+            await loadSession();
+            updateEngine('res');
+            alert('Project loaded successfully!');
+        } catch (err) {
+            console.error(err);
+            alert('Failed to load project file.');
+        }
+    };
+    input.click(); // Trigger the hidden file browser
+};
+
 init();
